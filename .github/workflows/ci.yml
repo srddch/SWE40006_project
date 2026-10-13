@@ -3,6 +3,7 @@ name: Backend and browser verification
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,6 +12,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
     services:
       mariadb:
         image: mariadb:11.4
@@ -43,6 +47,41 @@ jobs:
         run: python -m pytest --cov=taskmanager --cov-report=term-missing --cov-report=xml --cov-fail-under=80 --junitxml=test-results/junit.xml --screenshot=only-on-failure --tracing=retain-on-failure
       - name: Build verified application image
         run: docker build -t swe40006-project:${{ github.sha }} .
+      - name: Authenticate to AWS with short-lived credentials
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::612153306600:role/SWE40006-GitHub-ECR-Push
+          aws-region: ap-southeast-2
+          role-duration-seconds: 900
+          allowed-account-ids: '612153306600'
+      - name: Publish tested image to Amazon ECR
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        env:
+          AWS_REGION: ap-southeast-2
+          ECR_REPOSITORY: swe40006-taskmanager
+          ECR_REGISTRY: 612153306600.dkr.ecr.ap-southeast-2.amazonaws.com
+        run: |
+          set -euo pipefail
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"
+          if aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids "imageTag=$GITHUB_SHA" >/dev/null 2>&1; then
+            echo "The immutable image for this commit already exists."
+          else
+            docker tag "swe40006-project:$GITHUB_SHA" "$IMAGE_URI"
+            docker push "$IMAGE_URI"
+          fi
+          printf '%s\n' "$IMAGE_URI" > image-uri.txt
+          aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids "imageTag=$GITHUB_SHA" --query 'imageDetails[0].{digest:imageDigest,tags:imageTags,pushedAt:imagePushedAt}' --output json > image-evidence.json
+          printf '### Published application image\n\n`%s`\n' "$IMAGE_URI" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain image version evidence
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-image
+          path: |
+            image-uri.txt
+            image-evidence.json
       - name: Retain test evidence
         if: always()
         uses: actions/upload-artifact@v4
