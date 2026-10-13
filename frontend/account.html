@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - Account</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Task Manager</h1>
+    </header>
+    <main>
+        <section class="task-form login-form">
+            <div class="account-buttons">
+                <button type="button" id="login-tab">Login</button>
+                <button type="button" id="register-tab">Register</button>
+            </div>
+            <div id="login-section">
+                <h2>Login</h2>
+                <form id="login-form">
+                    <label for="login-username">Username</label>
+                    <input
+                        type="text"
+                        id="login-username"
+                        placeholder="Enter your username"
+                        required
+                    >
+                    <label for="login-password">Password</label>
+                    <input
+                        type="password"
+                        id="login-password"
+                        placeholder="Enter your password"
+                        required
+                    >
+                    <button type="submit">
+                        Login
+                    </button>
+                    <p id="login-message"></p>
+                </form>
+            </div>
+            <div id="register-section" hidden>
+                <h2>Register</h2>
+                <form id="register-form">
+                    <label for="register-username">
+                        Username
+                    </label>
+                    <input
+                        type="text"
+                        id="register-username"
+                        placeholder="Enter a username"
+                        required
+                    >
+                    <label for="register-password">
+                        Password
+                    </label>
+                    <input
+                        type="password"
+                        id="register-password"
+                        placeholder="Enter a password"
+                        required
+                    >
+                    <label for="confirm-password">
+                        Confirm Password
+                    </label>
+                    <input
+                        type="password"
+                        id="confirm-password"
+                        placeholder="Enter your password again"
+                        required
+                    >
+                    <button type="submit">
+                        Register
+                    </button>
+                    <p id="register-message" role="alert"></p>
+                </form>
+            </div>
+        </section>
+    </main>
+    <script src="/static/api.js"></script>
+    <script src="/static/account.js"></script>
+</body>
+</html>

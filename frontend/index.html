@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Task Manager</h1>
+        <p>
+            Welcome,
+            <span id="current-username"></span>
+        </p>
+        <button
+            type="button"
+            id="logout-button"
+        >
+            Logout
+        </button>
+    </header>
+    <main>
+        <section class="task-form">
+            <h2 id="form-heading">
+                Add a Task
+            </h2>
+            <form id="task-form">
+                <label for="task-title">
+                    Task Title
+                </label>
+                <input
+                    type="text"
+                    id="task-title"
+                    placeholder="Enter task title"
+                    required
+                >
+                <label for="task-description">
+                    Description
+                </label>
+                <textarea
+                    id="task-description"
+                    placeholder="Enter task description"
+                    rows="3"
+                ></textarea>
+                <div class="form-buttons">
+                    <button
+                        type="submit"
+                        id="save-button"
+                    >
+                        Add Task
+                    </button>
+                    <button
+                        type="button"
+                        id="cancel-button"
+                        hidden
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </section>
+        <section class="task-section">
+            <h2>My Tasks</h2>
+            <div class="task-summary">
+                <p>
+                    Total:
+                    <span id="total-tasks">0</span>
+                </p>
+                <p>
+                    Completed:
+                    <span id="completed-tasks">0</span>
+                </p>
+            </div>
+            <p id="task-message" role="alert"></p>
+            <div id="task-list"></div>
+            <p id="empty-message">
+                No tasks yet
+            </p>
+        </section>
+    </main>
+    <script src="/static/api.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>

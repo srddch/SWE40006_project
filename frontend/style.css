@@ -1,0 +1,193 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    color: #222;
+}
+
+header {
+    background: #2a3544;
+    color: white;
+    text-align: center;
+    padding: 25px 15px;
+}
+
+header h1 {
+    margin: 0 0 8px;
+}
+
+header p {
+    margin: 0;
+    color: #d1d5db;
+}
+
+#logout-button {
+    background: #f04c4c;
+    margin-top: 12px;
+}
+
+main {
+    width: 90%;
+    max-width: 700px;
+    margin: 30px auto;
+}
+
+.task-form,
+.task-section {
+    background: white;
+    padding: 22px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #00000010;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+label {
+    display: block;
+    margin: 15px 0 6px;
+    font-weight: bold;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font: inherit;
+}
+
+textarea {
+    resize: vertical;
+}
+
+button {
+    padding: 10px 14px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font: inherit;
+    background: #4e78d3;
+    color: white;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+#cancel-button {
+    background: #6b7280;
+}
+
+.edit-button {
+    background: #4b5563;
+}
+
+.delete-button {
+    background: #f04c4c;
+}
+
+.login-form {
+    max-width: 450px;
+    margin: 30px auto;
+}
+
+.login-form button {
+    margin-top: 15px;
+}
+
+.account-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.account-buttons button {
+    flex: 1;
+    margin-top: 0;
+}
+
+#login-message,
+#register-message {
+    text-align: center;
+    font-weight: bold;
+}
+
+.task-summary {
+    display: flex;
+    gap: 20px;
+    color: #555;
+}
+
+.task-card {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 12px 0;
+    background: #fff;
+}
+
+.task-card h3 {
+    margin: 0 0 8px;
+    overflow-wrap: anywhere;
+}
+
+.task-card p {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.task-card.completed {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.task-card.completed h3 {
+    text-decoration: line-through;
+    color: #666;
+}
+
+.task-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-status input {
+    width: auto;
+}
+
+.task-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+#empty-message {
+    color: #777;
+    text-align: center;
+    padding: 15px;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+[hidden] {
+    display: none !important;
+}

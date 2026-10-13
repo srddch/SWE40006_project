@@ -1,0 +1,54 @@
+name: Backend and browser verification
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: taskmanager_test
+          MARIADB_USER: taskmanager_test
+          MARIADB_PASSWORD: isolated-ci-test-password
+          MARIADB_ROOT_PASSWORD: isolated-ci-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: development
+      TEST_DATABASE_URL: mysql+pymysql://taskmanager_test:isolated-ci-test-password@127.0.0.1:3306/taskmanager_test?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium --only-shell
+      - name: Run API, MariaDB and browser tests
+        run: pytest --cov=taskmanager --cov-report=term-missing --cov-report=xml --cov-fail-under=80 --junitxml=test-results/junit.xml --screenshot=only-on-failure --tracing=retain-on-failure
+      - name: Build verified application image
+        run: docker build -t swe40006-project:${{ github.sha }} .
+      - name: Retain test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence
+          path: |
+            coverage.xml
+            test-results/
+          if-no-files-found: warn
