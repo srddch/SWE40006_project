@@ -1,4 +1,4 @@
-name: Backend and browser verification
+name: Test, publish and deploy staging
 
 on:
   push:
@@ -7,6 +7,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: swe40006-ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -90,4 +94,43 @@ jobs:
           path: |
             coverage.xml
             test-results/
+          if-no-files-found: warn
+
+  staging:
+    name: Deploy and verify staging
+    needs: verify
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install deployment clients
+        run: pip install 'boto3>=1.35,<2' requests==2.34.2
+      - name: Authenticate for staging only
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::612153306600:role/SWE40006-GitHub-Staging-Deploy
+          aws-region: ap-southeast-2
+          role-duration-seconds: 900
+      - name: Deploy the tested immutable image
+        run: |
+          INSTANCE=$(python -c 'import json; print(json.load(open("deploy/environments.json"))["environments"]["staging"]["instance_id"])')
+          python deploy/ssm_deploy.py --instance "$INSTANCE" --sha "$GITHUB_SHA" --output deployment-evidence/staging-ssm.json
+      - name: Verify staging HTTPS and task workflow
+        run: |
+          URL=$(python -c 'import json; print(json.load(open("deploy/environments.json"))["environments"]["staging"]["url"])')
+          python deploy/smoke.py --url "$URL" --sha "$GITHUB_SHA" --environment staging --output deployment-evidence/staging-smoke.json
+          printf '### Staging release verified\n\nURL: %s\n\nCommit: `%s`\n\nProduction requires the manual production workflow.\n' "$URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain staging deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-deployment-evidence
+          path: deployment-evidence/
           if-no-files-found: warn

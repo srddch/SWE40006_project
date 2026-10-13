@@ -1,0 +1,62 @@
+name: Manually promote verified staging to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: 'Full 40-character commit SHA currently verified on staging'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swe40006-production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    name: Production release explicitly requested by operator
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CANDIDATE_SHA: ${{ inputs.image_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install deployment clients
+        run: pip install 'boto3>=1.35,<2' requests==2.34.2
+      - name: Require successful staging before promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python deploy/validate_release.py
+      - name: Authenticate for production only
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::612153306600:role/SWE40006-GitHub-Production-Deploy
+          aws-region: ap-southeast-2
+          role-duration-seconds: 900
+      - name: Promote the exact same immutable image
+        run: |
+          INSTANCE=$(python -c 'import json; print(json.load(open("deploy/environments.json"))["environments"]["production"]["instance_id"])')
+          python deploy/ssm_deploy.py --instance "$INSTANCE" --sha "$CANDIDATE_SHA" --output deployment-evidence/production-ssm.json
+      - name: Verify production HTTPS and task workflow
+        run: |
+          URL=$(python -c 'import json; print(json.load(open("deploy/environments.json"))["environments"]["production"]["url"])')
+          python deploy/smoke.py --url "$URL" --sha "$CANDIDATE_SHA" --environment production --output deployment-evidence/production-smoke.json
+          printf '### Production release verified\n\nURL: %s\n\nCommit: `%s`\n\nManually requested by: %s\n' "$URL" "$CANDIDATE_SHA" "$GITHUB_ACTOR" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain production deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-deployment-evidence
+          path: deployment-evidence/
+          if-no-files-found: warn
