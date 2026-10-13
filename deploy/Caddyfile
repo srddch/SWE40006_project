@@ -1,0 +1,7 @@
+{$SITE_HOST} {
+    header X-Deployment-Environment {$DEPLOY_ENV}
+    header X-Release-SHA {$RELEASE_SHA}
+    @private_metrics path /metrics
+    respond @private_metrics 404
+    reverse_proxy web:8000
+}

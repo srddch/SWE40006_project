@@ -1,0 +1,16 @@
+{
+  "region": "ap-southeast-2",
+  "account": "612153306600",
+  "environments": {
+    "staging": {
+      "instance_id": "i-088f4da7f4434ea8e",
+      "url": "https://swe40006-staging-13-237-171-201.sslip.io",
+      "role_arn": "arn:aws:iam::612153306600:role/SWE40006-GitHub-Staging-Deploy"
+    },
+    "production": {
+      "instance_id": "i-0ce962fcfeb18ff74",
+      "url": "https://swe40006-production-3-24-70-105.sslip.io",
+      "role_arn": "arn:aws:iam::612153306600:role/SWE40006-GitHub-Production-Deploy"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    mem_limit: 384m
+    command: ["--innodb-buffer-pool-size=128M", "--max-connections=30"]
+    environment:
+      MARIADB_DATABASE: taskmanager
+      MARIADB_USER: taskmanager
+      MARIADB_PASSWORD: ${DB_PASSWORD:?required}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?required}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+  web:
+    image: ${IMAGE_URI:?required}
+    restart: unless-stopped
+    mem_limit: 192m
+    environment:
+      APP_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?required}
+      DATABASE_URL: mysql+pymysql://taskmanager:${DB_PASSWORD}@db:3306/taskmanager?charset=utf8mb4
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+  proxy:
+    image: caddy:2.10
+    restart: unless-stopped
+    mem_limit: 96m
+    environment:
+      SITE_HOST: ${SITE_HOST:?required}
+      DEPLOY_ENV: ${DEPLOY_ENV:?required}
+      RELEASE_SHA: ${RELEASE_SHA:?required}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+volumes:
+  mariadb_data:
+  caddy_data:
+  caddy_config:
