@@ -40,7 +40,7 @@ jobs:
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium --only-shell
       - name: Run API, MariaDB and browser tests
-        run: pytest --cov=taskmanager --cov-report=term-missing --cov-report=xml --cov-fail-under=80 --junitxml=test-results/junit.xml --screenshot=only-on-failure --tracing=retain-on-failure
+        run: python -m pytest --cov=taskmanager --cov-report=term-missing --cov-report=xml --cov-fail-under=80 --junitxml=test-results/junit.xml --screenshot=only-on-failure --tracing=retain-on-failure
       - name: Build verified application image
         run: docker build -t swe40006-project:${{ github.sha }} .
       - name: Retain test evidence
