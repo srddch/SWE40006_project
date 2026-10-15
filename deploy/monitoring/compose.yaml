@@ -1,0 +1,67 @@
+services:
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    mem_limit: 48m
+    command: ['--path.rootfs=/host', '--web.listen-address=127.0.0.1:9100', '--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+)($$|/)']
+    volumes:
+      - /:/host:ro,rslave
+  blackbox:
+    image: prom/blackbox-exporter:v0.27.0
+    restart: unless-stopped
+    network_mode: host
+    mem_limit: 48m
+    command: ['--config.file=/etc/blackbox.yml', '--web.listen-address=127.0.0.1:9115']
+    volumes:
+      - ./blackbox.yml:/etc/blackbox.yml:ro
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    restart: unless-stopped
+    network_mode: host
+    mem_limit: 128m
+    environment:
+      GOMEMLIMIT: 96MiB
+    command: ['--config.file=/etc/prometheus/prometheus.yml', '--storage.tsdb.path=/prometheus', '--storage.tsdb.retention.time=3d', '--storage.tsdb.retention.size=256MB', '--web.listen-address=127.0.0.1:9090']
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    network_mode: host
+    mem_limit: 48m
+    command: ['--config.file=/etc/alertmanager/alertmanager.yml', '--web.listen-address=127.0.0.1:9093', '--cluster.listen-address=']
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+  grafana:
+    image: grafana/grafana:13.2.2
+    restart: unless-stopped
+    network_mode: host
+    mem_limit: 192m
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: '3000'
+      GF_SERVER_ROOT_URL: http://127.0.0.1:13000
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_AUTH_BASIC_ENABLED: 'false'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: 'true'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: 'false'
+      GF_LOG_LEVEL: warn
+    volumes:
+      - ./datasource.yml:/etc/grafana/provisioning/datasources/default.yml:ro
+      - ./dashboards.yml:/etc/grafana/provisioning/dashboards/default.yml:ro
+      - ./dashboard.json:/var/lib/grafana/dashboards/swe40006.json:ro
+      - grafana_data:/var/lib/grafana
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
