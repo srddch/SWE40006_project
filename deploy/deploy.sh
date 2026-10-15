@@ -15,7 +15,7 @@ docker pull "$NEW_IMAGE"
 OLD_SHA=$(sed -n 's/^RELEASE_SHA=//p' .env)
 cp .env .env.previous
 sed -i "s|^IMAGE_URI=.*|IMAGE_URI=$NEW_IMAGE|;s|^RELEASE_SHA=.*|RELEASE_SHA=$NEW_SHA|" .env
-if ! docker compose up -d --wait --wait-timeout 240; then
+if ! docker compose up -d --wait --wait-timeout "${SWE40006_WAIT_SECONDS:-240}"; then
     echo 'Candidate failed readiness; restoring previous application version.'
     mv .env.previous .env
     if [[ "$OLD_SHA" =~ ^[0-9a-f]{40}$ ]]; then docker compose up -d --wait --wait-timeout 180; fi
