@@ -1,8 +1,11 @@
 """Invoke the fixed deployment document and retain its non-secret result."""
 import argparse
+import base64
+import io
 import json
 import re
 import time
+import tarfile
 from pathlib import Path
 import boto3
 
@@ -30,10 +33,25 @@ while time.monotonic() < deadline:
         continue
     evidence = {key: result.get(key) for key in (
         'CommandId', 'InstanceId', 'Status', 'ResponseCode',
+        'ExecutionStartDateTime', 'ExecutionEndDateTime',
         'StandardOutputContent', 'StandardErrorContent')}
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text(json.dumps(evidence, indent=2) + '\n')
-    print(evidence['StandardOutputContent'])
+    output = evidence['StandardOutputContent'] or ''
+    for line in output.splitlines():
+        if line.startswith('STAGING_TEST_ARTIFACTS_B64='):
+            destination = Path(args.output).parent / 'staging-tests'
+            destination.mkdir(parents=True, exist_ok=True)
+            payload = base64.b64decode(line.split('=', 1)[1], validate=True)
+            allowed = {'pytest.log', 'junit.xml', 'coverage.xml', 'result.json', 'test-image-digest.txt'}
+            with tarfile.open(fileobj=io.BytesIO(payload), mode='r:gz') as archive:
+                for member in archive.getmembers():
+                    if member.name not in allowed or not member.isfile() or member.size > 2_000_000:
+                        raise RuntimeError('Unexpected test evidence archive entry')
+                    (destination / member.name).write_bytes(archive.extractfile(member).read())
+            print('Staging XML, JSON and original test log retained in ' + str(destination))
+        else:
+            print(line)
     if result['Status'] != 'Success':
         print(evidence['StandardErrorContent'])
         raise SystemExit('Deployment failed: ' + result['Status'])

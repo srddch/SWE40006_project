@@ -21,6 +21,11 @@ if ! docker compose up -d --wait --wait-timeout "${SWE40006_WAIT_SECONDS:-240}";
     if [[ "$OLD_SHA" =~ ^[0-9a-f]{40}$ ]]; then docker compose up -d --wait --wait-timeout 180; fi
     exit 1
 fi
+# This hook is installed only on the staging host. It runs the matching test
+# image in a separate Docker network/database and fails this SSM command on error.
+if [[ -x /usr/local/bin/swe40006-staging-tests ]]; then
+    /usr/local/bin/swe40006-staging-tests "$NEW_SHA"
+fi
 python3 - <<'PY'
 import json, urllib.request
 with urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=10) as r:

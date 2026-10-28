@@ -1,4 +1,4 @@
-"""Require a successful staging workflow before manual production promotion."""
+"""Require the exact successful staging run before automatic or manual promotion."""
 import json
 import os
 import re
@@ -21,5 +21,12 @@ response.raise_for_status()
 qualified = [r for r in response.json()['workflow_runs']
              if r['head_branch'] == 'main' and r['event'] in ('push', 'workflow_dispatch')]
 assert qualified, 'No successful test-and-staging workflow exists for this commit'
+source_run = os.environ.get('SOURCE_RUN_ID', '')
+if os.environ.get('RELEASE_TRIGGER') == 'workflow_run':
+    assert source_run.isdigit(), 'Automatic promotion must identify its source run'
+    qualified = [r for r in qualified if str(r['id']) == source_run]
+    assert qualified, 'Automatic trigger does not match the successful candidate run'
 print(json.dumps({'approved_candidate': sha, 'staging_url': staging_url,
-                  'qualified_run': qualified[0]['html_url'], 'status': 'eligible'}))
+                  'qualified_run': qualified[0]['html_url'],
+                  'trigger': os.environ.get('RELEASE_TRIGGER', 'workflow_dispatch'),
+                  'status': 'eligible'}))

@@ -1,6 +1,10 @@
-name: Manually promote verified staging to production
+name: Promote verified staging to production
 
 on:
+  workflow_run:
+    workflows: ['Test, publish and deploy staging']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       image_sha:
@@ -17,8 +21,14 @@ concurrency:
 
 jobs:
   production:
-    name: Production release explicitly requested by operator
-    if: github.ref == 'refs/heads/main'
+    name: Promote the verified image and check production
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        (github.event.workflow_run.event == 'push' ||
+         github.event.workflow_run.event == 'workflow_dispatch')))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -26,9 +36,13 @@ jobs:
       actions: read
       id-token: write
     env:
-      CANDIDATE_SHA: ${{ inputs.image_sha }}
+      CANDIDATE_SHA: ${{ inputs.image_sha || github.event.workflow_run.head_sha }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+      RELEASE_TRIGGER: ${{ github.event_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_sha || github.event.workflow_run.head_sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -52,7 +66,7 @@ jobs:
         run: |
           URL=$(python -c 'import json; print(json.load(open("deploy/environments.json"))["environments"]["production"]["url"])')
           python deploy/smoke.py --url "$URL" --sha "$CANDIDATE_SHA" --environment production --output deployment-evidence/production-smoke.json
-          printf '### Production release verified\n\nURL: %s\n\nCommit: `%s`\n\nManually requested by: %s\n' "$URL" "$CANDIDATE_SHA" "$GITHUB_ACTOR" >> "$GITHUB_STEP_SUMMARY"
+          printf '### Production release verified\n\nURL: %s\n\nCommit: `%s`\n\nTrigger: `%s`\n\nSuccessful source CI/staging run: `%s`\n' "$URL" "$CANDIDATE_SHA" "$RELEASE_TRIGGER" "${SOURCE_RUN_ID:-manual fallback}" >> "$GITHUB_STEP_SUMMARY"
       - name: Retain production deployment evidence
         if: always()
         uses: actions/upload-artifact@v4

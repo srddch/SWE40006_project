@@ -1,0 +1,12 @@
+FROM python:3.13-slim
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 APP_ENV=development
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt \
+    && python -m playwright install --with-deps chromium --only-shell
+COPY taskmanager ./taskmanager
+COPY frontend ./frontend
+COPY tests ./tests
+COPY wsgi.py pytest.ini ./
+COPY deploy/run_test_suite.py ./deploy/run_test_suite.py
+ENTRYPOINT ["python", "deploy/run_test_suite.py"]
